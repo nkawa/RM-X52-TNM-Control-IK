@@ -149,6 +149,12 @@ export default function Home() {
       } else {
         target_pos = pos_sub(save_target, move_pos)
       }
+      const ans1 = calc_side_2(target_pos.x,target_pos.z)
+      if(ans1.s < joint_pos[0].j7.z){
+        const ans2 = calc_side_1(joint_pos[0].j7.z,ans1.k)
+        target_pos.x = ans2.b
+        target_pos.z = ans2.a
+      }
       set_target(getpos(target_pos))
     }
   }, [controller_object.position.x, controller_object.position.y, controller_object.position.z])
@@ -161,7 +167,15 @@ export default function Home() {
             if (controller_xdeg.crot == -999){
               controller_xdeg.crot = cur_rot; // 最初の wrist_rot_x
             }
-            return controller_xdeg.crot- round(toAngle(controller_object.rotation.x - controller_xdeg.xdeg))
+            const q = new THREE.Quaternion().setFromEuler(
+              new THREE.Euler((controller_object.rotation.x - 0.6654549523360951),controller_object.rotation.y,controller_object.rotation.z,'ZYX')
+            )
+            const p = quaternionToRotation(q,{x:0,y:0,z:-1})
+            //console.log(`p:{x:${p.x}, y:${p.y}, z:${p.z}}`)
+            const ans = direction_angle(p)
+            //console.log(`ans:{direction:${ans.direction}, angle:${ans.angle}}`)
+            return round(ans.angle-90)
+            //return controller_xdeg.crot- round(toAngle(controller_object.rotation.x - controller_xdeg.xdeg))
           }
         )
     }
@@ -405,6 +419,28 @@ export default function Home() {
         wk_j4_rotate = 165
       }
     }
+
+      const base_m4 = new THREE.Matrix4().multiply(
+        new THREE.Matrix4().makeRotationY(toRadian(wk_j1_rotate)).setPosition(joint_pos[0].j1.x,joint_pos[0].j1.y,joint_pos[0].j1.z)
+      ).multiply(
+        new THREE.Matrix4().makeRotationX(toRadian(wk_j2_rotate)).setPosition(joint_pos[0].j2.x,joint_pos[0].j2.y,joint_pos[0].j2.z)
+      ).multiply(
+        new THREE.Matrix4().makeRotationX(toRadian(wk_j3_rotate)).setPosition(joint_pos[findindex].j3.x,joint_pos[findindex].j3.y,joint_pos[findindex].j3.z)
+      ).multiply(
+        new THREE.Matrix4().makeRotationX(toRadian(wk_j4_rotate)).setPosition(joint_pos[findindex].j4.x,joint_pos[findindex].j4.y,joint_pos[findindex].j4.z)
+      )
+      const j4_pos = new THREE.Vector4(0,0,0,1).applyMatrix4(base_m4)
+      if(j4_pos.y < 0.04){
+        flg = false
+      }
+
+      base_m4.multiply(
+        new THREE.Matrix4().setPosition(joint_pos[0].j7.x,joint_pos[0].j7.y,joint_pos[0].j7.z)
+      )
+      const j7_pos = new THREE.Vector4(0,0,0,1).applyMatrix4(base_m4)
+      if(j7_pos.y < 0.04){
+        flg = false
+      }
 
     if(flg){
       set_j1_rotate(wk_j1_rotate)
